@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { 
   Teacher, Group, ClassRoom, ClassRoomBooking, Student, Attendance, 
   ViewMode, Payment, PaymentStatus
@@ -11,6 +12,19 @@ import {
   roomBookings as initialBookings
 } from '../data/mockData';
 import { useToast } from '@/hooks/use-toast';
+
+// Ключи для локального хранилища
+const STORAGE_KEYS = {
+  TEACHERS: 'profit_teachers',
+  GROUPS: 'profit_groups',
+  CLASSROOMS: 'profit_classrooms',
+  STUDENTS: 'profit_students',
+  BOOKINGS: 'profit_bookings',
+  ATTENDANCE: 'profit_attendance',
+  PAYMENTS: 'profit_payments',
+  SELECTED_TEACHER: 'profit_selected_teacher',
+  VIEW_MODE: 'profit_view_mode'
+};
 
 interface AppContextType {
   teachers: Teacher[];
@@ -57,17 +71,82 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers);
-  const [groups, setGroups] = useState<Group[]>(initialGroups.map(group => ({ ...group, paymentPeriod: 8 }))); // По умолчанию 8 занятий в периоде
-  const [classrooms, setClassrooms] = useState<ClassRoom[]>(initialClassrooms);
-  const [students, setStudents] = useState<Student[]>(initialStudents);
-  const [bookings, setBookings] = useState<ClassRoomBooking[]>(initialBookings);
-  const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('');
-  const [viewMode, setViewMode] = useState<ViewMode>('day');
-  const [payments, setPayments] = useState<Payment[]>([]);
+  // Загрузка данных из localStorage или использование начальных значений
+  const loadFromStorage = <T,>(key: string, initialData: T): T => {
+    try {
+      const storedData = localStorage.getItem(key);
+      return storedData ? JSON.parse(storedData) : initialData;
+    } catch (error) {
+      console.error(`Error loading ${key} from localStorage:`, error);
+      return initialData;
+    }
+  };
+
+  const [teachers, setTeachers] = useState<Teacher[]>(() => 
+    loadFromStorage(STORAGE_KEYS.TEACHERS, initialTeachers));
+  
+  const [groups, setGroups] = useState<Group[]>(() => 
+    loadFromStorage(STORAGE_KEYS.GROUPS, initialGroups.map(group => ({ ...group, paymentPeriod: 8 }))));
+  
+  const [classrooms, setClassrooms] = useState<ClassRoom[]>(() => 
+    loadFromStorage(STORAGE_KEYS.CLASSROOMS, initialClassrooms));
+  
+  const [students, setStudents] = useState<Student[]>(() => 
+    loadFromStorage(STORAGE_KEYS.STUDENTS, initialStudents));
+  
+  const [bookings, setBookings] = useState<ClassRoomBooking[]>(() => 
+    loadFromStorage(STORAGE_KEYS.BOOKINGS, initialBookings));
+  
+  const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>(() => 
+    loadFromStorage(STORAGE_KEYS.ATTENDANCE, []));
+  
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>(() => 
+    loadFromStorage(STORAGE_KEYS.SELECTED_TEACHER, ''));
+  
+  const [viewMode, setViewMode] = useState<ViewMode>(() => 
+    loadFromStorage(STORAGE_KEYS.VIEW_MODE, 'day'));
+  
+  const [payments, setPayments] = useState<Payment[]>(() => 
+    loadFromStorage(STORAGE_KEYS.PAYMENTS, []));
   
   const { toast } = useToast();
+
+  // Сохранение данных в localStorage при изменении
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(teachers));
+  }, [teachers]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.GROUPS, JSON.stringify(groups));
+  }, [groups]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.CLASSROOMS, JSON.stringify(classrooms));
+  }, [classrooms]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+  }, [students]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(bookings));
+  }, [bookings]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendanceRecords));
+  }, [attendanceRecords]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SELECTED_TEACHER, JSON.stringify(selectedTeacherId));
+  }, [selectedTeacherId]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.VIEW_MODE, JSON.stringify(viewMode));
+  }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(payments));
+  }, [payments]);
 
   // Teacher management
   const addTeacher = (newTeacher: Omit<Teacher, 'id'>) => {

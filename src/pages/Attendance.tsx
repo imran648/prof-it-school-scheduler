@@ -7,7 +7,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Group, Student, Attendance as AttendanceType } from '@/types';
+import { Group, Student, Attendance as AttendanceType, WeekDay } from '@/types';
 import { CheckIcon, XIcon, CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
@@ -19,6 +19,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { WEEKDAYS } from '../data/mockData';
 
 const Attendance = () => {
   const { 
@@ -32,6 +33,7 @@ const Attendance = () => {
   const [formattedDate, setFormattedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [presentStudents, setPresentStudents] = useState<string[]>([]);
   const [absentStudents, setAbsentStudents] = useState<string[]>([]);
+  const [classDates, setClassDates] = useState<Date[]>([]);
   
   const { toast } = useToast();
   
@@ -46,14 +48,15 @@ const Attendance = () => {
     }
   }, [selectedTeacherId, groups, selectedGroup]);
   
+  // Обновляем строковое представление даты при изменении объекта Date
   useEffect(() => {
-    // Обновляем строковое представление даты при изменении объекта Date
     if (date) {
       const newFormattedDate = date.toISOString().split('T')[0];
       setFormattedDate(newFormattedDate);
     }
   }, [date]);
   
+  // Обновляем списки посещаемости при выборе группы или изменении даты
   useEffect(() => {
     if (selectedGroup) {
       const students = getGroupStudents(selectedGroup.id);
@@ -73,6 +76,43 @@ const Attendance = () => {
       }
     }
   }, [selectedGroup, formattedDate, attendanceRecords]);
+  
+  // Определяем даты занятий для выбранной группы
+  useEffect(() => {
+    if (selectedGroup) {
+      const dates: Date[] = [];
+      const today = new Date();
+      const currentDay = today.getDay(); // 0 - воскресенье, 1 - понедельник
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - currentDay + (currentDay === 0 ? -6 : 1)); // Начало недели - понедельник
+      
+      // Добавляем 4 недели вперед для отображения в календаре
+      for (let week = 0; week < 4; week++) {
+        selectedGroup.schedule.forEach(session => {
+          const dayIndex = WEEKDAYS.indexOf(session.day as WeekDay);
+          if (dayIndex !== -1) {
+            const sessionDate = new Date(startOfWeek);
+            sessionDate.setDate(startOfWeek.getDate() + dayIndex + (week * 7));
+            dates.push(sessionDate);
+          }
+        });
+      }
+      
+      // Добавляем 4 недели назад для отображения в календаре
+      for (let week = 1; week <= 4; week++) {
+        selectedGroup.schedule.forEach(session => {
+          const dayIndex = WEEKDAYS.indexOf(session.day as WeekDay);
+          if (dayIndex !== -1) {
+            const sessionDate = new Date(startOfWeek);
+            sessionDate.setDate(startOfWeek.getDate() + dayIndex - (week * 7));
+            dates.push(sessionDate);
+          }
+        });
+      }
+      
+      setClassDates(dates);
+    }
+  }, [selectedGroup]);
   
   const handleToggleAttendance = (studentId: string) => {
     if (presentStudents.includes(studentId)) {
@@ -102,6 +142,24 @@ const Attendance = () => {
       description: `Записано для группы ${selectedGroup.name} на ${new Date(formattedDate).toLocaleDateString('ru-RU')}`
     });
   };
+  
+  // Создаем модифицированный компонент календаря с подсветкой дней занятий
+  const CustomCalendar = () => (
+    <Calendar
+      mode="single"
+      selected={date}
+      onSelect={(newDate) => newDate && setDate(newDate)}
+      initialFocus
+      className={cn("p-3 pointer-events-auto")}
+      modifiers={{
+        classDay: classDates,
+      }}
+      modifiersClassNames={{
+        classDay: "bg-profit-blue/20 text-profit-dark font-medium rounded-md",
+      }}
+      locale={ru}
+    />
+  );
   
   if (!selectedTeacherId) {
     return (
@@ -186,13 +244,7 @@ const Attendance = () => {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={(newDate) => newDate && setDate(newDate)}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
+                    <CustomCalendar />
                   </PopoverContent>
                 </Popover>
               </div>
