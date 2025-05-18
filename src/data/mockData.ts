@@ -44,6 +44,7 @@ export const groups: Group[] = [
     completedLessons: 8,
     students: students.filter(s => s.groupId === '1'),
     lastPaymentDate: '2025-04-15',
+    paymentPeriod: 8,
   },
   {
     id: '2',
@@ -59,6 +60,7 @@ export const groups: Group[] = [
     completedLessons: 6,
     students: students.filter(s => s.groupId === '2'),
     lastPaymentDate: '2025-04-01',
+    paymentPeriod: 8,
   },
   {
     id: '3',
@@ -74,6 +76,7 @@ export const groups: Group[] = [
     completedLessons: 4,
     students: students.filter(s => s.groupId === '3'),
     lastPaymentDate: '2025-04-10',
+    paymentPeriod: 8,
   },
 ];
 

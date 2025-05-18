@@ -28,6 +28,7 @@ const Groups = () => {
     startDate: '',
     endDate: '',
     totalLessons: 32,
+    paymentPeriod: 8, // Default payment period of 8 lessons
   });
   
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
@@ -50,6 +51,7 @@ const Groups = () => {
       completedLessons: 0,
       students: [],
       lastPaymentDate: new Date().toISOString().split('T')[0],
+      paymentPeriod: newGroup.paymentPeriod,
     });
     
     setNewGroup({
@@ -58,6 +60,7 @@ const Groups = () => {
       startDate: '',
       endDate: '',
       totalLessons: 32,
+      paymentPeriod: 8,
     });
     
     setIsAddGroupOpen(false);
@@ -188,6 +191,18 @@ const Groups = () => {
                     min="1" 
                     value={newGroup.totalLessons} 
                     onChange={(e) => setNewGroup({...newGroup, totalLessons: Number(e.target.value)})}
+                    required
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="paymentPeriod">Количество занятий между оплатами</Label>
+                  <Input 
+                    id="paymentPeriod" 
+                    type="number" 
+                    min="1" 
+                    value={newGroup.paymentPeriod} 
+                    onChange={(e) => setNewGroup({...newGroup, paymentPeriod: Number(e.target.value)})}
                     required
                   />
                 </div>
@@ -332,7 +347,7 @@ const Groups = () => {
                         variant="outline" 
                         className="w-full border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600"
                       >
-                        <TrashIcon className="mr-2 h-4 w-4" /> Удалить группу
+                        <TrashIcon className="mr-2 h-4 w-4" /> Удалить ��руппу
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
