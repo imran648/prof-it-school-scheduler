@@ -8,6 +8,8 @@ import { AppProvider } from "./context/AppContext";
 import MainLayout from "./components/layout/MainLayout";
 import Schedule from "./pages/Schedule";
 import Groups from "./pages/Groups";
+import Teachers from "./pages/Teachers";
+import ClassRooms from "./pages/ClassRooms";
 import TeacherJournal from "./pages/TeacherJournal";
 import Attendance from "./pages/Attendance";
 import NotFound from "./pages/NotFound";
@@ -25,6 +27,8 @@ const App = () => (
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Schedule />} />
               <Route path="groups" element={<Groups />} />
+              <Route path="teachers" element={<Teachers />} />
+              <Route path="classrooms" element={<ClassRooms />} />
               <Route path="teacher-journal" element={<TeacherJournal />} />
               <Route path="attendance" element={<Attendance />} />
             </Route>

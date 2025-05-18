@@ -1,7 +1,7 @@
 
 import { NavLink } from 'react-router-dom';
 import { 
-  CalendarIcon, UsersIcon, BookOpenIcon, BookIcon
+  CalendarIcon, UsersIcon, UserIcon, BookOpenIcon, BookIcon, LayoutIcon
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -28,6 +28,16 @@ const Sidebar = () => {
         <NavLink to="/groups" className={getLinkClassName}>
           <UsersIcon className="w-5 h-5" />
           <span>Группы</span>
+        </NavLink>
+        
+        <NavLink to="/teachers" className={getLinkClassName}>
+          <UserIcon className="w-5 h-5" />
+          <span>Преподаватели</span>
+        </NavLink>
+        
+        <NavLink to="/classrooms" className={getLinkClassName}>
+          <LayoutIcon className="w-5 h-5" />
+          <span>Кабинеты</span>
         </NavLink>
         
         <NavLink to="/teacher-journal" className={getLinkClassName}>

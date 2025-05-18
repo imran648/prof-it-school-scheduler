@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Group, Student } from '@/types';
 import { PlusIcon, UsersIcon } from 'lucide-react';
+import GroupDetail from '@/components/GroupDetail';
 
 const Groups = () => {
   const { 
@@ -38,6 +39,7 @@ const Groups = () => {
   
   const [isAddGroupOpen, setIsAddGroupOpen] = useState(false);
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  const [isGroupDetailOpen, setIsGroupDetailOpen] = useState(false);
   
   const handleAddGroup = (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +90,11 @@ const Groups = () => {
   
   const calculateProgress = (completed: number, total: number) => {
     return (completed / total) * 100;
+  };
+
+  const openGroupDetail = (groupId: string) => {
+    setSelectedGroupId(groupId);
+    setIsGroupDetailOpen(true);
   };
 
   return (
@@ -303,7 +310,11 @@ const Groups = () => {
                 </div>
                 
                 <div className="pt-2">
-                  <Button variant="outline" className="w-full" onClick={() => setSelectedGroupId(group.id)}>
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={() => openGroupDetail(group.id)}
+                  >
                     <UsersIcon className="mr-2 h-4 w-4" /> Просмотр группы
                   </Button>
                 </div>
@@ -324,6 +335,16 @@ const Groups = () => {
             </Button>
           </div>
         </Card>
+      )}
+      
+      {isGroupDetailOpen && selectedGroupId && (
+        <GroupDetail 
+          groupId={selectedGroupId} 
+          onClose={() => {
+            setIsGroupDetailOpen(false);
+            setSelectedGroupId('');
+          }} 
+        />
       )}
     </div>
   );

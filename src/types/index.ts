@@ -4,6 +4,9 @@ export interface Teacher {
   name: string;
   subject: string;
   groups: string[];
+  email?: string;
+  phone?: string;
+  photoUrl?: string;
 }
 
 export interface Student {
@@ -38,6 +41,9 @@ export interface ClassRoom {
   id: string;
   name: string;
   capacity: number;
+  equipment?: string[];
+  location?: string;
+  isActive?: boolean;
 }
 
 export interface ClassRoomBooking {
@@ -61,3 +67,5 @@ export interface Attendance {
 
 export type WeekDay = 'Понедельник' | 'Вторник' | 'Среда' | 'Четверг' | 'Пятница' | 'Суббота' | 'Воскресенье';
 export type TimeSlot = '09:00' | '10:30' | '12:00' | '13:30' | '15:00' | '16:30' | '18:00' | '19:30';
+
+export type ViewMode = 'day' | 'week' | 'month';
