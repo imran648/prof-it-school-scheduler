@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { 
-  Teacher, Group, ClassRoom, ClassRoomBooking, Student, Attendance, ViewMode
+  Teacher, Group, ClassRoom, ClassRoomBooking, Student, Attendance, 
+  ViewMode, Payment, PaymentStatus
 } from '../types';
 import { 
   teachers as initialTeachers, 
@@ -20,6 +21,7 @@ interface AppContextType {
   attendanceRecords: Attendance[];
   selectedTeacherId: string;
   viewMode: ViewMode;
+  payments: Payment[];
   setViewMode: (mode: ViewMode) => void;
   setSelectedTeacherId: (id: string) => void;
   addTeacher: (teacher: Omit<Teacher, 'id'>) => void;
@@ -38,6 +40,11 @@ interface AppContextType {
   updateBooking: (booking: ClassRoomBooking) => void;
   deleteBooking: (bookingId: string) => void;
   recordAttendance: (attendance: Attendance) => void;
+  addPayment: (payment: Omit<Payment, 'id'>) => void;
+  updatePaymentStatus: (paymentId: string, status: PaymentStatus) => void;
+  getStudentPayments: (studentId: string) => Payment[];
+  getGroupPayments: (groupId: string) => Payment[];
+  generatePaymentPeriods: (groupId: string) => void;
   getTeacherGroups: (teacherId: string) => Group[];
   getGroupStudents: (groupId: string) => Student[];
   getRoomBookings: (roomId: string, date?: string) => ClassRoomBooking[];
@@ -51,13 +58,14 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers);
-  const [groups, setGroups] = useState<Group[]>(initialGroups);
+  const [groups, setGroups] = useState<Group[]>(initialGroups.map(group => ({ ...group, paymentPeriod: 8 }))); // По умолчанию 8 занятий в периоде
   const [classrooms, setClassrooms] = useState<ClassRoom[]>(initialClassrooms);
   const [students, setStudents] = useState<Student[]>(initialStudents);
   const [bookings, setBookings] = useState<ClassRoomBooking[]>(initialBookings);
   const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('');
   const [viewMode, setViewMode] = useState<ViewMode>('day');
+  const [payments, setPayments] = useState<Payment[]>([]);
   
   const { toast } = useToast();
 
@@ -126,7 +134,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Group management
   const addGroup = (newGroup: Omit<Group, 'id'>) => {
     const id = Date.now().toString();
-    const group = { ...newGroup, id };
+    const group = { 
+      ...newGroup, 
+      id, 
+      paymentPeriod: newGroup.paymentPeriod || 8 // По умолчанию 8 занятий в периоде
+    };
     setGroups([...groups, group as Group]);
     toast({
       title: "Группа создана",
@@ -144,7 +156,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const deleteGroup = (groupId: string) => {
     const group = groups.find(g => g.id === groupId);
+    
+    // Удалить все связанные данные
+    const updatedStudents = students.filter(student => student.groupId !== groupId);
+    const updatedBookings = bookings.filter(booking => booking.groupId !== groupId);
+    const updatedPayments = payments.filter(payment => {
+      const student = students.find(s => s.id === payment.studentId);
+      return !student || student.groupId !== groupId;
+    });
+    const updatedAttendance = attendanceRecords.filter(record => record.groupId !== groupId);
+    
+    setStudents(updatedStudents);
+    setBookings(updatedBookings);
+    setPayments(updatedPayments);
+    setAttendanceRecords(updatedAttendance);
     setGroups(groups.filter(group => group.id !== groupId));
+    
     if (group) {
       toast({
         title: "Группа удалена",
@@ -230,6 +257,98 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   };
 
+  // Payment management
+  const addPayment = (newPayment: Omit<Payment, 'id'>) => {
+    const id = Date.now().toString();
+    const payment = { ...newPayment, id };
+    setPayments([...payments, payment as Payment]);
+    toast({
+      title: "Платеж создан",
+      description: `Платеж за период ${newPayment.period} создан.`,
+    });
+  };
+
+  const updatePaymentStatus = (paymentId: string, status: PaymentStatus) => {
+    const updatedPayments = payments.map(payment => {
+      if (payment.id === paymentId) {
+        const updatedPayment = { ...payment, status };
+        toast({
+          title: "Статус оплаты обновлен",
+          description: `Платеж ${payment.id} теперь имеет статус: ${status}.`,
+        });
+        return updatedPayment;
+      }
+      return payment;
+    });
+    
+    setPayments(updatedPayments);
+  };
+
+  const getStudentPayments = (studentId: string) => {
+    return payments.filter(payment => payment.studentId === studentId);
+  };
+
+  const getGroupPayments = (groupId: string) => {
+    const groupStudentIds = students
+      .filter(student => student.groupId === groupId)
+      .map(student => student.id);
+    
+    return payments.filter(payment => groupStudentIds.includes(payment.studentId));
+  };
+
+  // Создание периодов оплаты для группы
+  const generatePaymentPeriods = (groupId: string) => {
+    const group = groups.find(g => g.id === groupId);
+    if (!group) return;
+    
+    const groupStudents = getGroupStudents(groupId);
+    const paymentPeriod = group.paymentPeriod || 8;
+    
+    // Создаем платежи для всех студентов на основе количества уроков
+    groupStudents.forEach(student => {
+      // Для каждого полного периода создаем платеж
+      for (let i = 0; i < group.totalLessons; i += paymentPeriod) {
+        const lessonStart = i + 1;
+        const lessonEnd = Math.min(i + paymentPeriod, group.totalLessons);
+        
+        // Проверяем, существует ли уже такой платеж
+        const existingPayment = payments.find(p => 
+          p.studentId === student.id && 
+          p.lessonStart === lessonStart && 
+          p.lessonEnd === lessonEnd
+        );
+        
+        if (!existingPayment) {
+          // Создаем платеж, если не существует
+          const period = `Занятия ${lessonStart}-${lessonEnd}`;
+          
+          // Определяем статус платежа
+          let status: PaymentStatus = 'pending';
+          if (group.completedLessons >= lessonEnd) {
+            status = 'overdue'; // Занятия уже прошли, оплата просрочена
+          } else if (group.completedLessons >= lessonStart) {
+            status = 'pending'; // Текущий период, оплата ожидается
+          }
+          
+          addPayment({
+            studentId: student.id,
+            amount: 10000, // Условная сумма
+            date: new Date().toISOString().split('T')[0],
+            status: status,
+            period: period,
+            lessonStart: lessonStart,
+            lessonEnd: lessonEnd
+          });
+        }
+      }
+    });
+    
+    toast({
+      title: "Периоды оплаты сгенерированы",
+      description: `Периоды оплаты для группы ${group.name} успешно сгенерированы.`,
+    });
+  };
+
   // Data access functions
   const getTeacherGroups = (teacherId: string) => {
     return groups.filter(group => group.teacherId === teacherId);
@@ -279,6 +398,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       attendanceRecords,
       selectedTeacherId,
       viewMode,
+      payments,
       setViewMode,
       setSelectedTeacherId,
       addTeacher,
@@ -297,6 +417,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       updateBooking,
       deleteBooking,
       recordAttendance,
+      addPayment,
+      updatePaymentStatus,
+      getStudentPayments,
+      getGroupPayments,
+      generatePaymentPeriods,
       getTeacherGroups,
       getGroupStudents,
       getRoomBookings,

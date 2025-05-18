@@ -14,6 +14,7 @@ export interface Student {
   name: string;
   contacts: string;
   groupId: string;
+  payments?: Payment[];
 }
 
 export interface Group {
@@ -27,6 +28,7 @@ export interface Group {
   completedLessons: number;
   students: Student[];
   lastPaymentDate: string;
+  paymentPeriod: number; // количество занятий между оплатами
 }
 
 export interface ClassSession {
@@ -65,7 +67,18 @@ export interface Attendance {
   absentStudents: string[];
 }
 
+export interface Payment {
+  id: string;
+  studentId: string;
+  amount: number;
+  date: string;
+  status: PaymentStatus;
+  period: string; // Например, "Занятия 1-8"
+  lessonStart: number;
+  lessonEnd: number;
+}
+
+export type PaymentStatus = 'pending' | 'confirmed' | 'overdue';
 export type WeekDay = 'Понедельник' | 'Вторник' | 'Среда' | 'Четверг' | 'Пятница' | 'Суббота' | 'Воскресенье';
 export type TimeSlot = '09:00' | '10:30' | '12:00' | '13:30' | '15:00' | '16:30' | '18:00' | '19:30';
-
 export type ViewMode = 'day' | 'week' | 'month';

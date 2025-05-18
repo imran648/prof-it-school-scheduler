@@ -1,25 +1,25 @@
-
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
   Dialog, DialogContent, DialogDescription, DialogFooter, 
-  DialogHeader, DialogTitle, DialogTrigger 
+  DialogHeader, DialogTitle, DialogTrigger, DialogClose
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Group, Student } from '@/types';
-import { PlusIcon, UsersIcon } from 'lucide-react';
+import { PlusIcon, UsersIcon, TrashIcon } from 'lucide-react';
 import GroupDetail from '@/components/GroupDetail';
 
 const Groups = () => {
   const { 
     groups, teachers, classrooms, addGroup, getGroupStudents, 
-    addStudent, removeStudent
+    addStudent, removeStudent, deleteGroup, generatePaymentPeriods
   } = useApp();
   
   const [newGroup, setNewGroup] = useState({
@@ -78,6 +78,14 @@ const Groups = () => {
     });
     
     setIsAddStudentOpen(false);
+  };
+  
+  const handleDeleteGroup = (groupId: string) => {
+    deleteGroup(groupId);
+    if (selectedGroupId === groupId) {
+      setSelectedGroupId('');
+      setIsGroupDetailOpen(false);
+    }
   };
   
   const selectedGroup = groups.find(g => g.id === selectedGroupId);
@@ -309,13 +317,51 @@ const Groups = () => {
                   )}
                 </div>
                 
-                <div className="pt-2">
+                <div className="pt-2 flex flex-col gap-2">
                   <Button 
                     variant="outline" 
                     className="w-full" 
                     onClick={() => openGroupDetail(group.id)}
                   >
                     <UsersIcon className="mr-2 h-4 w-4" /> Просмотр группы
+                  </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="w-full border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <TrashIcon className="mr-2 h-4 w-4" /> Удалить группу
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Удаление группы</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Вы уверены, что хотите удалить группу "{group.name}"? 
+                          Это действие нельзя отменить. Все данные группы, включая 
+                          записи о студентах, посещаемости и оплатах, будут удалены.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Отмена</AlertDialogCancel>
+                        <AlertDialogAction 
+                          className="bg-red-500 hover:bg-red-600"
+                          onClick={() => handleDeleteGroup(group.id)}
+                        >
+                          Удалить
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700"
+                    onClick={() => generatePaymentPeriods(group.id)}
+                  >
+                    <UsersIcon className="mr-2 h-4 w-4" /> Сгенерировать периоды оплаты
                   </Button>
                 </div>
               </div>

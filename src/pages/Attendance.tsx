@@ -8,8 +8,17 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Group, Student, Attendance as AttendanceType } from '@/types';
-import { CheckIcon, XIcon } from 'lucide-react';
+import { CheckIcon, XIcon, CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 const Attendance = () => {
   const { 
@@ -19,7 +28,8 @@ const Attendance = () => {
   
   const [teacherGroups, setTeacherGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState<Date>(new Date());
+  const [formattedDate, setFormattedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [presentStudents, setPresentStudents] = useState<string[]>([]);
   const [absentStudents, setAbsentStudents] = useState<string[]>([]);
   
@@ -37,12 +47,20 @@ const Attendance = () => {
   }, [selectedTeacherId, groups, selectedGroup]);
   
   useEffect(() => {
+    // Обновляем строковое представление даты при изменении объекта Date
+    if (date) {
+      const newFormattedDate = date.toISOString().split('T')[0];
+      setFormattedDate(newFormattedDate);
+    }
+  }, [date]);
+  
+  useEffect(() => {
     if (selectedGroup) {
       const students = getGroupStudents(selectedGroup.id);
       
       // Check if attendance record exists
       const existingRecord = attendanceRecords.find(
-        record => record.groupId === selectedGroup.id && record.date === date
+        record => record.groupId === selectedGroup.id && record.date === formattedDate
       );
       
       if (existingRecord) {
@@ -54,7 +72,7 @@ const Attendance = () => {
         setAbsentStudents([]);
       }
     }
-  }, [selectedGroup, date, attendanceRecords]);
+  }, [selectedGroup, formattedDate, attendanceRecords]);
   
   const handleToggleAttendance = (studentId: string) => {
     if (presentStudents.includes(studentId)) {
@@ -69,11 +87,11 @@ const Attendance = () => {
   const handleSaveAttendance = () => {
     if (!selectedGroup) return;
     
-    const sessionId = `${selectedGroup.id}-${date}`;
+    const sessionId = `${selectedGroup.id}-${formattedDate}`;
     
     recordAttendance({
       sessionId,
-      date,
+      date: formattedDate,
       groupId: selectedGroup.id,
       presentStudents,
       absentStudents
@@ -81,7 +99,7 @@ const Attendance = () => {
     
     toast({
       title: "Посещаемость сохранена",
-      description: `Записано для группы ${selectedGroup.name} на ${new Date(date).toLocaleDateString('ru-RU')}`
+      description: `Записано для группы ${selectedGroup.name} на ${new Date(formattedDate).toLocaleDateString('ru-RU')}`
     });
   };
   
@@ -150,12 +168,33 @@ const Attendance = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Дата занятия
                 </label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date ? (
+                        format(date, "PPP", { locale: ru })
+                      ) : (
+                        <span>Выберите дату</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={(newDate) => newDate && setDate(newDate)}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             
