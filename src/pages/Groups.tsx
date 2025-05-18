@@ -19,7 +19,7 @@ import GroupDetail from '@/components/GroupDetail';
 const Groups = () => {
   const { 
     groups, teachers, classrooms, addGroup, getGroupStudents, 
-    addStudent, removeStudent, deleteGroup, generatePaymentPeriods
+    addStudent, removeStudent, deleteGroup
   } = useApp();
   
   const [newGroup, setNewGroup] = useState({
@@ -347,7 +347,7 @@ const Groups = () => {
                         variant="outline" 
                         className="w-full border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600"
                       >
-                        <TrashIcon className="mr-2 h-4 w-4" /> Удалить ��руппу
+                        <TrashIcon className="mr-2 h-4 w-4" /> Удалить группу
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -370,14 +370,6 @@ const Groups = () => {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                  
-                  <Button 
-                    variant="outline" 
-                    className="w-full border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700"
-                    onClick={() => generatePaymentPeriods(group.id)}
-                  >
-                    <UsersIcon className="mr-2 h-4 w-4" /> Сгенерировать периоды оплаты
-                  </Button>
                 </div>
               </div>
             </CardContent>

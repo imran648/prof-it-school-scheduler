@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { 
   Teacher, Group, ClassRoom, ClassRoomBooking, Student, Attendance, 
@@ -219,6 +218,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       paymentPeriod: newGroup.paymentPeriod || 8 // По умолчанию 8 занятий в периоде
     };
     setGroups([...groups, group as Group]);
+    
+    // Automatically generate payment periods for the new group
+    setTimeout(() => {
+      generatePaymentPeriods(id);
+    }, 100);
+    
     toast({
       title: "Группа создана",
       description: `Группа ${newGroup.name} успешно создана.`,
@@ -340,27 +345,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const addPayment = (newPayment: Omit<Payment, 'id'>) => {
     const id = Date.now().toString();
     const payment = { ...newPayment, id };
-    setPayments([...payments, payment as Payment]);
-    toast({
-      title: "Платеж создан",
-      description: `Платеж за период ${newPayment.period} создан.`,
+    setPayments(prevPayments => {
+      // Check if payment already exists to avoid duplicates
+      const paymentExists = prevPayments.some(p => 
+        p.studentId === newPayment.studentId && 
+        p.lessonStart === newPayment.lessonStart && 
+        p.lessonEnd === newPayment.lessonEnd
+      );
+      
+      if (paymentExists) {
+        return prevPayments;
+      }
+      
+      const updatedPayments = [...prevPayments, payment as Payment];
+      // Ensure storage is updated
+      localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(updatedPayments));
+      return updatedPayments;
     });
   };
 
   const updatePaymentStatus = (paymentId: string, status: PaymentStatus) => {
-    const updatedPayments = payments.map(payment => {
-      if (payment.id === paymentId) {
-        const updatedPayment = { ...payment, status };
-        toast({
-          title: "Статус оплаты обновлен",
-          description: `Платеж ${payment.id} теперь имеет статус: ${status}.`,
-        });
-        return updatedPayment;
-      }
-      return payment;
+    setPayments(prevPayments => {
+      const updatedPayments = prevPayments.map(payment => {
+        if (payment.id === paymentId) {
+          const updatedPayment = { ...payment, status };
+          toast({
+            title: "Статус оплаты обновлен",
+            description: `Платеж ${payment.id} теперь имеет статус: ${status}.`,
+          });
+          return updatedPayment;
+        }
+        return payment;
+      });
+      
+      // Ensure storage is updated immediately
+      localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(updatedPayments));
+      return updatedPayments;
     });
-    
-    setPayments(updatedPayments);
   };
 
   const getStudentPayments = (studentId: string) => {
@@ -383,6 +404,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const groupStudents = getGroupStudents(groupId);
     const paymentPeriod = group.paymentPeriod || 8;
     
+    const newPayments: Omit<Payment, 'id'>[] = [];
+    
     // Создаем платежи для всех студентов на основе количества уроков
     groupStudents.forEach(student => {
       // Для каждого полного периода создаем платеж
@@ -398,7 +421,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         );
         
         if (!existingPayment) {
-          // Создаем платеж, если не существует
+          // Со��даем платеж, если не существует
           const period = `Занятия ${lessonStart}-${lessonEnd}`;
           
           // Определяем статус платежа
@@ -409,7 +432,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             status = 'pending'; // Текущий период, оплата ожидается
           }
           
-          addPayment({
+          newPayments.push({
             studentId: student.id,
             amount: 10000, // Условная сумма
             date: new Date().toISOString().split('T')[0],
@@ -422,10 +445,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     });
     
-    toast({
-      title: "Периоды оплаты сгенерированы",
-      description: `Периоды оплаты для группы ${group.name} успешно сгенерированы.`,
-    });
+    // Добавляем все новые платежи одним действием
+    if (newPayments.length > 0) {
+      newPayments.forEach(payment => addPayment(payment));
+      
+      toast({
+        title: "Периоды оплаты сгенерированы",
+        description: `Периоды оплаты для группы ${group.name} успешно сгенерированы.`,
+      });
+    }
   };
 
   // Data access functions
