@@ -11,6 +11,7 @@ import {
   roomBookings as initialBookings
 } from '../data/mockData';
 import { useToast } from '@/hooks/use-toast';
+import { format, addMonths } from 'date-fns';
 
 // Ключи для локального хранилища
 const STORAGE_KEYS = {
@@ -215,14 +216,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const group = { 
       ...newGroup, 
       id, 
-      paymentPeriod: newGroup.paymentPeriod || 8 // По умолчанию 8 занятий в периоде
+      paymentPeriod: newGroup.paymentPeriod || 8,
+      paymentType: newGroup.paymentType || 'perLesson',
+      monthlyFee: newGroup.monthlyFee || 10000,
     };
     setGroups([...groups, group as Group]);
-    
-    // Automatically generate payment periods for the new group
-    setTimeout(() => {
-      generatePaymentPeriods(id);
-    }, 100);
     
     toast({
       title: "Группа создана",
@@ -402,50 +400,90 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!group) return;
     
     const groupStudents = getGroupStudents(groupId);
-    const paymentPeriod = group.paymentPeriod || 8;
     
     const newPayments: Omit<Payment, 'id'>[] = [];
     
-    // Создаем платежи для всех студентов на основе количества уроков
-    groupStudents.forEach(student => {
-      // Для каждого полного периода создаем платеж
-      for (let i = 0; i < group.totalLessons; i += paymentPeriod) {
-        const lessonStart = i + 1;
-        const lessonEnd = Math.min(i + paymentPeriod, group.totalLessons);
-        
-        // Проверяем, существует ли уже такой платеж
-        const existingPayment = payments.find(p => 
-          p.studentId === student.id && 
-          p.lessonStart === lessonStart && 
-          p.lessonEnd === lessonEnd
-        );
-        
-        if (!existingPayment) {
-          // Со��даем платеж, если не существует
-          const period = `Занятия ${lessonStart}-${lessonEnd}`;
+    // Генерируем платежи в зависимости от типа оплаты
+    if (group.paymentType === 'perLesson') {
+      const paymentPeriod = group.paymentPeriod || 8;
+      
+      // Создаем платежи для всех студентов на основе количества уроков
+      groupStudents.forEach(student => {
+        // Для каждого полного периода создаем платеж
+        for (let i = 0; i < group.totalLessons; i += paymentPeriod) {
+          const lessonStart = i + 1;
+          const lessonEnd = Math.min(i + paymentPeriod, group.totalLessons);
           
-          // Определяем статус платежа
-          let status: PaymentStatus = 'pending';
-          if (group.completedLessons >= lessonEnd) {
-            status = 'overdue'; // Занятия уже прошли, оплата просрочена
-          } else if (group.completedLessons >= lessonStart) {
-            status = 'pending'; // Текущий период, оплата ожидается
+          // Проверяем, существует ли уже такой платеж
+          const existingPayment = payments.find(p => 
+            p.studentId === student.id && 
+            p.lessonStart === lessonStart && 
+            p.lessonEnd === lessonEnd
+          );
+          
+          if (!existingPayment) {
+            // Создаем платеж, если не существует
+            const period = `Занятия ${lessonStart}-${lessonEnd}`;
+            
+            // Определяем статус платежа
+            let status: PaymentStatus = 'pending';
+            if (group.completedLessons >= lessonEnd) {
+              status = 'overdue'; // Занятия уже прошли, оплата просрочена
+            } else if (group.completedLessons >= lessonStart) {
+              status = 'pending'; // Текущий период, оплата ожидается
+            }
+            
+            newPayments.push({
+              studentId: student.id,
+              amount: 10000, // Условная сумма
+              date: new Date().toISOString().split('T')[0],
+              status: status,
+              period: period,
+              lessonStart: lessonStart,
+              lessonEnd: lessonEnd
+            });
           }
-          
-          newPayments.push({
-            studentId: student.id,
-            amount: 10000, // Условная сумма
-            date: new Date().toISOString().split('T')[0],
-            status: status,
-            period: period,
-            lessonStart: lessonStart,
-            lessonEnd: lessonEnd
-          });
         }
+      });
+    } else { // monthly payments
+      // Определяем количество месяцев между датами начала и окончания
+      const startDate = new Date(group.startDate);
+      const endDate = new Date(group.endDate);
+      
+      let currentDate = new Date(startDate);
+      const monthlyAmount = group.monthlyFee || 10000;
+      
+      // Создаем платежи для всех месяцев
+      while (currentDate <= endDate) {
+        const month = format(currentDate, 'yyyy-MM');
+        const monthName = format(currentDate, 'MMMM yyyy');
+        
+        groupStudents.forEach(student => {
+          // Проверяем, существует ли уже такой платеж
+          const existingPayment = payments.find(p => 
+            p.studentId === student.id && 
+            p.month === month
+          );
+          
+          if (!existingPayment) {
+            // Создаем ежемесячный платеж
+            newPayments.push({
+              studentId: student.id,
+              amount: monthlyAmount,
+              date: new Date().toISOString().split('T')[0],
+              status: 'pending',
+              period: monthName,
+              month: month
+            });
+          }
+        });
+        
+        // Переходим к следующему месяцу
+        currentDate = addMonths(currentDate, 1);
       }
-    });
+    }
     
-    // Добавляем все новые платежи одним действием
+    // Добавляем все новые платежи
     if (newPayments.length > 0) {
       newPayments.forEach(payment => addPayment(payment));
       

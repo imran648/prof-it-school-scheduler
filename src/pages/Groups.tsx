@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Group, Student } from '@/types';
 import { PlusIcon, UsersIcon, TrashIcon } from 'lucide-react';
 import GroupDetail from '@/components/GroupDetail';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const Groups = () => {
   const { 
@@ -29,6 +30,8 @@ const Groups = () => {
     endDate: '',
     totalLessons: 32,
     paymentPeriod: 8, // Default payment period of 8 lessons
+    paymentType: 'perLesson' as 'perLesson' | 'monthly',
+    monthlyFee: 10000, // Default monthly fee
   });
   
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
@@ -51,7 +54,6 @@ const Groups = () => {
       completedLessons: 0,
       students: [],
       lastPaymentDate: new Date().toISOString().split('T')[0],
-      paymentPeriod: newGroup.paymentPeriod,
     });
     
     setNewGroup({
@@ -61,6 +63,8 @@ const Groups = () => {
       endDate: '',
       totalLessons: 32,
       paymentPeriod: 8,
+      paymentType: 'perLesson',
+      monthlyFee: 10000,
     });
     
     setIsAddGroupOpen(false);
@@ -196,16 +200,51 @@ const Groups = () => {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="paymentPeriod">Количество занятий между оплатами</Label>
-                  <Input 
-                    id="paymentPeriod" 
-                    type="number" 
-                    min="1" 
-                    value={newGroup.paymentPeriod} 
-                    onChange={(e) => setNewGroup({...newGroup, paymentPeriod: Number(e.target.value)})}
-                    required
-                  />
+                  <Label>Тип оплаты</Label>
+                  <RadioGroup 
+                    value={newGroup.paymentType} 
+                    onValueChange={(value) => setNewGroup({
+                      ...newGroup, 
+                      paymentType: value as 'perLesson' | 'monthly'
+                    })}
+                    className="flex flex-col space-y-1"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="perLesson" id="perLesson" />
+                      <Label htmlFor="perLesson">Оплата за занятия</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="monthly" id="monthly" />
+                      <Label htmlFor="monthly">Ежемесячная оплата</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
+                
+                {newGroup.paymentType === 'perLesson' ? (
+                  <div className="grid gap-2">
+                    <Label htmlFor="paymentPeriod">Количество занятий между оплатами</Label>
+                    <Input 
+                      id="paymentPeriod" 
+                      type="number" 
+                      min="1" 
+                      value={newGroup.paymentPeriod} 
+                      onChange={(e) => setNewGroup({...newGroup, paymentPeriod: Number(e.target.value)})}
+                      required
+                    />
+                  </div>
+                ) : (
+                  <div className="grid gap-2">
+                    <Label htmlFor="monthlyFee">Ежемесячная плата (₽)</Label>
+                    <Input 
+                      id="monthlyFee" 
+                      type="number" 
+                      min="1" 
+                      value={newGroup.monthlyFee} 
+                      onChange={(e) => setNewGroup({...newGroup, monthlyFee: Number(e.target.value)})}
+                      required
+                    />
+                  </div>
+                )}
               </div>
               
               <DialogFooter>

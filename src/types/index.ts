@@ -29,6 +29,8 @@ export interface Group {
   students: Student[];
   lastPaymentDate: string;
   paymentPeriod: number; // количество занятий между оплатами
+  paymentType: 'perLesson' | 'monthly'; // тип оплаты: за уроки или за месяц
+  monthlyFee?: number; // ежемесячная плата (если paymentType === 'monthly')
 }
 
 export interface ClassSession {
@@ -73,9 +75,10 @@ export interface Payment {
   amount: number;
   date: string;
   status: PaymentStatus;
-  period: string; // Например, "Занятия 1-8"
-  lessonStart: number;
-  lessonEnd: number;
+  period: string; // Например, "Занятия 1-8" или "Май 2024"
+  lessonStart?: number; // Начальный урок (для оплаты по урокам)
+  lessonEnd?: number; // Конечный урок (для оплаты по урокам)
+  month?: string; // Месяц (для ежемесячной оплаты)
 }
 
 export type PaymentStatus = 'pending' | 'confirmed' | 'overdue';
